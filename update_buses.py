@@ -1,4 +1,3 @@
-```python
 import requests
 import json
 from google.transit import gtfs_realtime_pb2
