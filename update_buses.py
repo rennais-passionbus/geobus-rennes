@@ -1,5 +1,6 @@
 import requests
 import json
+from datetime import datetime, timezone
 from google.transit import gtfs_realtime_pb2
 
 URL = "https://proxy.transport.data.gouv.fr/resource/star-rennes-integration-gtfs-rt-vehicle-position"
@@ -108,5 +109,7 @@ with open("bus.geojson", "w", encoding="utf-8") as f:
         ensure_ascii=False
     )
 
+from datetime import datetime, timezone
 
 print(f"{len(features)} bus enregistrés")
+print("Mise à jour effectuée :", datetime.now(timezone.utc).isoformat())
