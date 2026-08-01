@@ -23,6 +23,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Synchroniser avec GitHub
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
       - name: Installer Python
         uses: actions/setup-python@v5
         with:
@@ -41,9 +46,10 @@ jobs:
 
           git add bus.geojson
 
-          git diff --cached --quiet || git commit -m "Mise à jour des positions"
-
-          git pull --rebase origin main
-
-          git push
+          if git diff --cached --quiet; then
+            echo "Aucune modification du GeoJSON."
+          else
+            git commit -m "Mise à jour des positions"
+            git push origin main
+          fi
 ```
