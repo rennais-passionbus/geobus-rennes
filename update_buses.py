@@ -110,4 +110,3 @@ with open("bus.geojson", "w", encoding="utf-8") as f:
 
 
 print(f"{len(features)} bus enregistrés")
-```
