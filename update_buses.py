@@ -64,3 +64,56 @@ with open("bus.geojson", "w", encoding="utf-8") as f:
     json.dump(geojson, f, ensure_ascii=False)
 
 print(f"{len(features)} bus enregistrés")
+```python
+# ============================================================
+# CORRESPONDANCE ID LIGNE STAR → NOM DE LIGNE
+# ============================================================
+
+def nom_ligne(route_id):
+
+    # --------------------------------------------------------
+    # CAS PARTICULIERS
+    # --------------------------------------------------------
+
+    # La Navette
+    if route_id == "0100":
+        return "La Navette"
+
+    # API
+    if route_id == "0803":
+        return "API"
+
+
+    # --------------------------------------------------------
+    # LIGNES CHRONOSTAR C1 À C7
+    # --------------------------------------------------------
+
+    if route_id == "0001":
+        return "C1"
+
+    if route_id == "0002":
+        return "C2"
+
+    if route_id == "0003":
+        return "C3"
+
+    if route_id == "0004":
+        return "C4"
+
+    if route_id == "0005":
+        return "C5"
+
+    if route_id == "0006":
+        return "C6"
+
+    if route_id == "0007":
+        return "C7"
+
+
+    # --------------------------------------------------------
+    # TOUTES LES AUTRES LIGNES
+    # On garde uniquement les deux derniers chiffres
+    # --------------------------------------------------------
+
+    return route_id[-2:]
+```
