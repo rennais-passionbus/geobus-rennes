@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from google.transit import gtfs_realtime_pb2
 
 URL = "https://proxy.transport.data.gouv.fr/resource/star-rennes-integration-gtfs-rt-vehicle-position"
-
+schedule:
+  - cron: "2-59/5 * * * *"
 
 def nom_ligne(route_id):
 
