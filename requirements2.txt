@@ -1,4 +1,0 @@
-Flask
-gunicorn
-requests
-gtfs-realtime-bindings
