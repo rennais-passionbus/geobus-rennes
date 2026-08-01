@@ -1,168 +1,45 @@
-```python
-import requests
-import json
-from google.transit import gtfs_realtime_pb2
+```yaml
+name: Mise à jour des bus STAR
 
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
 
-# ============================================================
-# URL DU FLUX TEMPS RÉEL STAR
-# ============================================================
+permissions:
+  contents: write
 
-URL = "https://proxy.transport.data.gouv.fr/resource/star-rennes-integration-gtfs-rt-vehicle-position"
+jobs:
+  update:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-# ============================================================
-# CORRESPONDANCE ID LIGNE STAR → NOM DE LIGNE
-# ============================================================
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
-def nom_ligne(route_id):
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
 
-    # Lignes particulières
-    if route_id == "0100":
-        return "La Navette"
+      - name: Récupérer les positions STAR
+        run: python update_buses.py
 
-    if route_id == "0803":
-        return "API"
+      - name: Publier le GeoJSON
+        run: |
+          git config user.name "STAR Bus Tracker"
+          git config user.email "actions@github.com"
 
-    # Chronostar C1 à C7
-    if route_id == "0001":
-        return "C1"
+          git add bus.geojson
 
-    if route_id == "0002":
-        return "C2"
+          git diff --cached --quiet || git commit -m "Mise à jour des positions"
 
-    if route_id == "0003":
-        return "C3"
+          git pull --rebase origin main
 
-    if route_id == "0004":
-        return "C4"
-
-    if route_id == "0005":
-        return "C5"
-
-    if route_id == "0006":
-        return "C6"
-
-    if route_id == "0007":
-        return "C7"
-
-    # Toutes les autres lignes :
-    # on conserve les deux derniers chiffres
-    return route_id[-2:]
-
-
-# ============================================================
-# RÉCUPÉRATION DES DONNÉES STAR
-# ============================================================
-
-response = requests.get(URL, timeout=30)
-response.raise_for_status()
-
-feed = gtfs_realtime_pb2.FeedMessage()
-feed.ParseFromString(response.content)
-
-
-# ============================================================
-# CRÉATION DU GEOJSON
-# ============================================================
-
-features = []
-
-
-for entity in feed.entity:
-
-    if not entity.HasField("vehicle"):
-        continue
-
-    vehicle = entity.vehicle
-
-    # Ignorer les véhicules sans position
-    if not vehicle.position.latitude or not vehicle.position.longitude:
-        continue
-
-    properties = {}
-
-
-    # ========================================================
-    # INFORMATIONS DU VÉHICULE
-    # ========================================================
-
-    if vehicle.vehicle:
-        properties["vehicle_id"] = vehicle.vehicle.id
-        properties["vehicle_label"] = vehicle.vehicle.label
-
-
-    # ========================================================
-    # INFORMATIONS DE LA LIGNE
-    # ========================================================
-
-    if vehicle.trip:
-
-        code_ligne = vehicle.trip.route_id
-
-        # ID technique STAR
-        properties["route_id"] = code_ligne
-
-        # Nom lisible de la ligne
-        properties["ligne"] = nom_ligne(code_ligne)
-
-        # Autres informations
-        properties["trip_id"] = vehicle.trip.trip_id
-        properties["direction_id"] = vehicle.trip.direction_id
-
-
-    # ========================================================
-    # AUTRES INFORMATIONS
-    # ========================================================
-
-    if vehicle.current_stop_sequence:
-        properties["stop_sequence"] = vehicle.current_stop_sequence
-
-    if vehicle.current_status:
-        properties["current_status"] = vehicle.current_status
-
-    if vehicle.timestamp:
-        properties["timestamp"] = vehicle.timestamp
-
-
-    # ========================================================
-    # CRÉATION DU POINT GEOJSON
-    # ========================================================
-
-    feature = {
-        "type": "Feature",
-
-        "geometry": {
-            "type": "Point",
-            "coordinates": [
-                vehicle.position.longitude,
-                vehicle.position.latitude
-            ]
-        },
-
-        "properties": properties
-    }
-
-    features.append(feature)
-
-
-# ============================================================
-# CRÉATION DU FICHIER FINAL
-# ============================================================
-
-geojson = {
-    "type": "FeatureCollection",
-    "features": features
-}
-
-
-with open("bus.geojson", "w", encoding="utf-8") as f:
-    json.dump(
-        geojson,
-        f,
-        ensure_ascii=False
-    )
-
-
-print(f"{len(features)} bus enregistrés")
+          git push
 ```
