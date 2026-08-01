@@ -6,6 +6,10 @@ on:
     - cron: "*/5 * * * *"
   workflow_dispatch:
 
+concurrency:
+  group: mise-a-jour-bus-star
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
