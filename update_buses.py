@@ -1,45 +1,114 @@
-name: Mise à jour des bus STAR
+```python
+import requests
+import json
+from google.transit import gtfs_realtime_pb2
 
-on:
-  schedule:
-    - cron: "*/5 * * * *"
-  workflow_dispatch:
+URL = "https://proxy.transport.data.gouv.fr/resource/star-rennes-integration-gtfs-rt-vehicle-position"
 
-permissions:
-  contents: write
 
-jobs:
-  update:
-    runs-on: ubuntu-latest
+def nom_ligne(route_id):
 
-    steps:
+    if route_id == "0100":
+        return "La Navette"
 
-      - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    if route_id == "0803":
+        return "API"
 
-      - name: Installer Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
+    if route_id == "0001":
+        return "C1"
 
-      - name: Installer les dépendances
-        run: pip install -r requirements.txt
+    if route_id == "0002":
+        return "C2"
 
-      - name: Récupérer les positions STAR
-        run: python update_buses.py
+    if route_id == "0003":
+        return "C3"
 
-      - name: Publier le GeoJSON
-        run: |
-          git config user.name "STAR Bus Tracker"
-          git config user.email "actions@github.com"
+    if route_id == "0004":
+        return "C4"
 
-          git add bus.geojson
+    if route_id == "0005":
+        return "C5"
 
-          git diff --cached --quiet || git commit -m "Mise à jour des positions"
+    if route_id == "0006":
+        return "C6"
 
-          git fetch origin main
-          git rebase origin/main
+    if route_id == "0007":
+        return "C7"
 
-          git push origin main
+    return route_id[-2:]
+
+
+response = requests.get(URL, timeout=30)
+response.raise_for_status()
+
+feed = gtfs_realtime_pb2.FeedMessage()
+feed.ParseFromString(response.content)
+
+features = []
+
+for entity in feed.entity:
+
+    if not entity.HasField("vehicle"):
+        continue
+
+    vehicle = entity.vehicle
+
+    if not vehicle.position.latitude or not vehicle.position.longitude:
+        continue
+
+    properties = {}
+
+    if vehicle.vehicle:
+        properties["vehicle_id"] = vehicle.vehicle.id
+        properties["vehicle_label"] = vehicle.vehicle.label
+
+    if vehicle.trip:
+
+        code_ligne = vehicle.trip.route_id
+
+        properties["route_id"] = code_ligne
+        properties["ligne"] = nom_ligne(code_ligne)
+
+        properties["trip_id"] = vehicle.trip.trip_id
+        properties["direction_id"] = vehicle.trip.direction_id
+
+    if vehicle.current_stop_sequence:
+        properties["stop_sequence"] = vehicle.current_stop_sequence
+
+    if vehicle.timestamp:
+        properties["timestamp"] = vehicle.timestamp
+
+    feature = {
+        "type": "Feature",
+
+        "geometry": {
+            "type": "Point",
+            "coordinates": [
+                vehicle.position.longitude,
+                vehicle.position.latitude
+            ]
+        },
+
+        "properties": properties
+    }
+
+    features.append(feature)
+
+
+geojson = {
+    "type": "FeatureCollection",
+    "features": features
+}
+
+
+with open("bus.geojson", "w", encoding="utf-8") as f:
+
+    json.dump(
+        geojson,
+        f,
+        ensure_ascii=False
+    )
+
+
+print(f"{len(features)} bus enregistrés")
+```
